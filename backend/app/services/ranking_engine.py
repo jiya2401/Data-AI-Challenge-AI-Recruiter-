@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from app.services.similarity_engine import (
     title_relevance_score,
     skill_match_score,
@@ -197,59 +197,58 @@ def _choose_template(candidate_id: str, options: list, salt: str = "") -> str:
 
 
 def is_honeypot(candidate: dict) -> bool:
-    """
-    5 checks exactly matching Ravi's validated pipeline.
-    """
-    cid = candidate["candidate_id"]
-    profile = candidate.get("profile", {})
-    exp_months = (profile.get("years_of_experience", 0) or 0) * 12
-    skills = candidate.get("skills", [])
-    career = candidate.get("career_history", [])
-    education = candidate.get("education", [])
+    """5 checks exactly matching Ravi's validated pipeline."""
+    try:
+        cid = candidate.get("candidate_id", "")
+        profile = candidate.get("profile", {}) or {}
+        exp_months = (profile.get("years_of_experience") or 0) * 12
+        skills = candidate.get("skills", []) or []
+        career = candidate.get("career_history", []) or []
+        education = candidate.get("education", []) or []
 
-    flags = 0
+        flags = 0
 
-    # 1. Skill duration exceeds total experience
-    for s in skills:
-        dm = s.get("duration_months", 0) or 0
-        if dm > exp_months + 24:
+        # 1. Skill duration exceeds total experience
+        for s in skills:
+            dm = s.get("duration_months") or 0
+            if dm > exp_months + 24:
+                flags += 1
+                break
+
+        # 2. Expert proficiency with near-zero duration
+        for s in skills:
+            if s.get("proficiency") == "expert" and (s.get("duration_months") or 0) <= 2:
+                flags += 1
+                break
+
+        # 3. Career months mismatch vs years of experience
+        career_months = sum(j.get("duration_months") or 0 for j in career)
+        if abs(career_months - exp_months) > 48:
             flags += 1
-            break
 
-    # 2. Expert proficiency with near-zero duration
-    for s in skills:
-        if s.get("proficiency") == "expert" and (s.get("duration_months", 0) or 0) <= 2:
+        # 4. Multiple simultaneous current jobs
+        current_jobs = [j for j in career if j.get("is_current")]
+        if len(current_jobs) > 1:
             flags += 1
-            break
 
-    # 3. Career months mismatch vs years of experience
-    career_months = sum(j.get("duration_months", 0) or 0 for j in career)
-    if abs(career_months - exp_months) > 48:
-        flags += 1
+        # 5. Education end_year before start_year
+        for e in education:
+            if e.get("end_year") and e.get("start_year") and e["end_year"] < e["start_year"]:
+                flags += 1
+                break
 
-    # 4. Multiple simultaneous current jobs
-    current_jobs = [j for j in career if j.get("is_current")]
-    if len(current_jobs) > 1:
-        flags += 1
-
-    # 5. Education end_year before start_year
-    for e in education:
-        if e.get("end_year") and e.get("start_year") and e["end_year"] < e["start_year"]:
-            flags += 1
-            break
-
-    return flags >= 2
+        return flags >= 2
+    except Exception:
+        return False
 
 
 def get_days_since_active(signals: dict) -> int:
-    last_active = signals.get("last_active_date", "")
-    if not last_active:
-        return 999
     try:
-        from datetime import datetime
-        last_date = datetime.fromisoformat(last_active).date()
-        today = date.today()
-        return (today - last_date).days
+        last_active = (signals or {}).get("last_active_date", "")
+        if not last_active:
+            return 999
+        last_date = datetime.fromisoformat(str(last_active)).date()
+        return (date.today() - last_date).days
     except Exception:
         return 999
 
@@ -268,6 +267,7 @@ def _title_bucket(title: str, title_score: float) -> str:
 
 
 def _experience_bucket(years: float) -> str:
+    years = years or 0
     if years < 3:
         return "early"
     if years < 5:
@@ -293,8 +293,7 @@ def _career_bucket(career_score: float) -> str:
     return "limited"
 
 
-def _closing_bucket(title_bucket: str, career_bucket: str,
-                    experience_bucket: str, activity_bucket: str) -> str:
+def _closing_bucket(title_bucket, career_bucket, experience_bucket, activity_bucket):
     if activity_bucket == "inactive" or experience_bucket == "early":
         return "cautious"
     if title_bucket in ("senior", "direct") and career_bucket == "strong":
@@ -302,161 +301,115 @@ def _closing_bucket(title_bucket: str, career_bucket: str,
     return "balanced"
 
 
-def _format_years(years: float) -> str:
-    if isinstance(years, float):
+def _format_years(years) -> str:
+    try:
+        years = float(years or 0)
         return f"{years:.1f}".rstrip("0").rstrip(".")
-    return str(years)
+    except Exception:
+        return "0"
 
 
 def _selected_reasoning_skills(skills: list) -> tuple:
     tiered_skills = {"differentiator": [], "core": []}
     seen = set()
-
-    for skill in sorted(
-        skills,
-        key=lambda s: s.get("duration_months", 0) or 0,
-        reverse=True,
-    ):
+    for skill in sorted(skills or [], key=lambda s: s.get("duration_months") or 0, reverse=True):
         name = skill.get("name") or ""
         if not is_relevant_skill(name) and not reasoning_skill_tier(name):
             continue
-
         display_name = normalize_reasoning_skill_name(name)
         tier = reasoning_skill_tier(display_name)
         if tier not in tiered_skills or display_name in seen:
             continue
-
         seen.add(display_name)
         tiered_skills[tier].append(display_name)
-
     if tiered_skills["differentiator"]:
         return tiered_skills["differentiator"][:2], "differentiator"
     return tiered_skills["core"][:2], "core"
 
 
-def build_reasoning(candidate: dict, title_score: float,
-                    career_score: float, days_inactive: int) -> str:
-    profile = candidate.get("profile", {})
-    title = profile.get("current_title", "")
-    years = profile.get("years_of_experience", 0)
-    skills = candidate.get("skills", [])
-    candidate_id = candidate.get("candidate_id", "")
+def build_reasoning(candidate, title_score, career_score, days_inactive):
+    try:
+        profile = candidate.get("profile", {}) or {}
+        title = profile.get("current_title", "") or ""
+        years = profile.get("years_of_experience") or 0
+        skills = candidate.get("skills", []) or []
+        candidate_id = candidate.get("candidate_id", "") or ""
 
-    title_bucket = _title_bucket(title, title_score)
-    opening_template = _choose_template(
-        candidate_id,
-        OPENING_REASON_TEMPLATES[title_bucket],
-        "opening",
-    )
-    role_template = _choose_template(
-        candidate_id,
-        ROLE_FIT_REASON_TEMPLATES[title_bucket],
-        "role",
-    )
-    sentences = [
-        (
-            f"{opening_template}; "
-            f"{role_template.format(title=title or 'the current role')}."
-        )
-    ]
+        title_bucket = _title_bucket(title, title_score)
+        opening_template = _choose_template(candidate_id, OPENING_REASON_TEMPLATES[title_bucket], "opening")
+        role_template = _choose_template(candidate_id, ROLE_FIT_REASON_TEMPLATES[title_bucket], "role")
+        sentences = [(f"{opening_template}; {role_template.format(title=title or 'the current role')}.")]
 
-    skill_names, skill_tier = _selected_reasoning_skills(skills)
-    evidence_parts = []
-    if skill_names:
-        skill_templates = (
-            SKILL_REASON_TEMPLATES
-            if skill_tier == "differentiator"
-            else CORE_SKILL_REASON_TEMPLATES
-        )
-        skill_template = _choose_template(candidate_id, skill_templates, "skills")
-        evidence_parts.append(skill_template.format(skills=", ".join(skill_names)))
+        skill_names, skill_tier = _selected_reasoning_skills(skills)
+        evidence_parts = []
+        if skill_names:
+            skill_templates = SKILL_REASON_TEMPLATES if skill_tier == "differentiator" else CORE_SKILL_REASON_TEMPLATES
+            skill_template = _choose_template(candidate_id, skill_templates, "skills")
+            evidence_parts.append(skill_template.format(skills=", ".join(skill_names)))
 
-    career_bucket = _career_bucket(career_score)
-    career_template = _choose_template(
-        candidate_id,
-        CAREER_REASON_TEMPLATES[career_bucket],
-        "career",
-    )
-    evidence_parts.append(career_template)
-    sentences.append("; ".join(evidence_parts) + ".")
+        career_bucket = _career_bucket(career_score)
+        career_template = _choose_template(candidate_id, CAREER_REASON_TEMPLATES[career_bucket], "career")
+        evidence_parts.append(career_template)
+        sentences.append("; ".join(evidence_parts) + ".")
 
-    experience_bucket = _experience_bucket(years)
-    experience_template = _choose_template(
-        candidate_id,
-        EXPERIENCE_REASON_TEMPLATES[experience_bucket],
-        "experience",
-    )
+        experience_bucket = _experience_bucket(years)
+        experience_template = _choose_template(candidate_id, EXPERIENCE_REASON_TEMPLATES[experience_bucket], "experience")
+        activity_bucket = _activity_bucket(days_inactive)
+        activity_template = _choose_template(candidate_id, ACTIVITY_REASON_TEMPLATES[activity_bucket], "behavior")
+        closing_bucket = _closing_bucket(title_bucket, career_bucket, experience_bucket, activity_bucket)
+        closing_template = _choose_template(candidate_id, CLOSING_REASON_TEMPLATES[closing_bucket], "closing")
+        sentences.append(f"{experience_template.format(years=_format_years(years))}; {activity_template}. {closing_template}.")
 
-    activity_bucket = _activity_bucket(days_inactive)
-    activity_template = _choose_template(
-        candidate_id,
-        ACTIVITY_REASON_TEMPLATES[activity_bucket],
-        "behavior",
-    )
-    closing_bucket = _closing_bucket(
-        title_bucket,
-        career_bucket,
-        experience_bucket,
-        activity_bucket,
-    )
-    closing_template = _choose_template(
-        candidate_id,
-        CLOSING_REASON_TEMPLATES[closing_bucket],
-        "closing",
-    )
-    sentences.append(
-        (
-            f"{experience_template.format(years=_format_years(years))}; "
-            f"{activity_template}. {closing_template}."
-        )
-    )
-
-    return " ".join(sentences)
+        return " ".join(sentences)
+    except Exception as e:
+        return f"Candidate profile processed. Score reflects technical and career signals."
 
 
 def rank_candidates(candidates: list) -> list:
     scored = []
 
     for candidate in candidates:
-        if is_honeypot(candidate):
+        try:
+            if is_honeypot(candidate):
+                continue
+
+            profile = candidate.get("profile", {}) or {}
+            signals = candidate.get("redrob_signals", {}) or {}
+            skills = candidate.get("skills", []) or []
+            career = candidate.get("career_history", []) or []
+
+            title = profile.get("current_title", "") or ""
+            years = profile.get("years_of_experience") or 0
+            days_inactive = get_days_since_active(signals)
+
+            title_inconsistency = has_title_experience_inconsistency(title, years)
+            t_score = title_relevance_score(title, years)
+            s_score = skill_match_score(skills)
+            c_score = career_substance_score(career)
+            e_score = experience_fit_score(years)
+            b_mult = behavioral_multiplier(signals, days_inactive)
+
+            base_score = (
+                0.35 * t_score +
+                0.30 * s_score +
+                0.20 * c_score +
+                0.15 * e_score
+            )
+            final_score = round(base_score * b_mult, 4)
+            if title_inconsistency:
+                final_score = round(final_score * 0.97, 4)
+
+            scored.append({
+                "candidate_id": candidate.get("candidate_id", "UNKNOWN"),
+                "score": final_score,
+                "reasoning": build_reasoning(candidate, t_score, c_score, days_inactive)
+            })
+        except Exception as e:
+            # Skip bad records silently
             continue
 
-        profile = candidate.get("profile", {})
-        signals = candidate.get("redrob_signals", {})
-        skills = candidate.get("skills", [])
-        career = candidate.get("career_history", [])
-
-        title = profile.get("current_title", "")
-        years = profile.get("years_of_experience", 0) or 0
-        days_inactive = get_days_since_active(signals)
-
-        title_inconsistency = has_title_experience_inconsistency(title, years)
-        t_score = title_relevance_score(title, years)
-        s_score = skill_match_score(skills)
-        c_score = career_substance_score(career)
-        e_score = experience_fit_score(years)
-        b_mult = behavioral_multiplier(signals, days_inactive)
-
-        base_score = (
-            0.35 * t_score +
-            0.30 * s_score +
-            0.20 * c_score +
-            0.15 * e_score
-        )
-        final_score = round(base_score * b_mult, 4)
-        if title_inconsistency:
-            final_score = round(final_score * 0.97, 4)
-
-        scored.append({
-            "candidate_id": candidate["candidate_id"],
-            "score": final_score,
-            "reasoning": build_reasoning(candidate, t_score, c_score, days_inactive)
-        })
-
-    # Sort by score desc, candidate_id asc for tie-breaking
     scored.sort(key=lambda x: (-x["score"], x["candidate_id"]))
 
-    # Assign ranks
     top100 = []
     for rank, item in enumerate(scored[:100], start=1):
         top100.append({
@@ -466,4 +419,4 @@ def rank_candidates(candidates: list) -> list:
             "reasoning": item["reasoning"]
         })
 
-    return top100 
+    return top100

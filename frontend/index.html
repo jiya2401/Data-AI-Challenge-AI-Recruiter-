@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI Recruiter — Redrob Challenge</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"/>
+<link href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css" rel="stylesheet"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#f8f9fa;--surface:#fff;--surface2:#f1f3f5;
+  --border:#e9ecef;--border2:#dee2e6;
+  --text:#212529;--text2:#6c757d;--text3:#adb5bd;
+  --accent:#3b82f6;--accent-bg:#eff6ff;--accent-text:#1d4ed8;
+  --green:#10b981;--green-bg:#ecfdf5;--green-text:#065f46;
+  --amber:#f59e0b;--amber-bg:#fffbeb;--amber-text:#92400e;
+  --red:#ef4444;--red-bg:#fef2f2;--red-text:#991b1b;
+  --purple:#8b5cf6;--purple-bg:#f5f3ff;--purple-text:#5b21b6;
+  --radius:8px;
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+.layout{display:flex;height:100vh;overflow:hidden}
+
+/* Sidebar */
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-logo{padding:18px 16px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border)}
+.logo-mark{width:32px;height:32px;background:var(--accent);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;flex-shrink:0}
+.logo-text{font-weight:600;font-size:14px}
+.logo-sub{font-size:11px;color:var(--text3)}
+.nav-section{padding:14px 16px 4px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3)}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;margin:1px 6px;color:var(--text2);cursor:pointer;font-size:13px;border-radius:var(--radius);transition:all .15s;user-select:none}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent-bg);color:var(--accent-text);font-weight:500}
+.nav-item i{font-size:17px;width:20px;text-align:center;flex-shrink:0}
+.sidebar-footer{margin-top:auto;padding:10px 6px;border-top:1px solid var(--border)}
+
+/* Main */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* Topbar */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:56px;flex-shrink:0}
+.topbar h1{font-size:17px;font-weight:600}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.status-badge{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:500;padding:4px 10px;border-radius:20px}
+.status-badge.connected{background:var(--green-bg);color:var(--green-text)}
+.status-badge.connecting{background:var(--amber-bg);color:var(--amber-text)}
+.status-badge.error{background:var(--red-bg);color:var(--red-text)}
+.sdot{width:7px;height:7px;border-radius:50%}
+.sdot.green{background:var(--green)}
+.sdot.amber{background:var(--amber);animation:pulse 1.4s infinite}
+.sdot.red{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--purple-bg);color:var(--purple-text);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;border:1.5px solid var(--border2)}
+
+/* Pages */
+.page{display:none;flex:1;flex-direction:column;overflow:hidden}
+.page.active{display:flex}
+.content{flex:1;overflow-y:auto;padding:20px 24px}
+
+/* Config banner */
+.config-banner{background:#fff;border:1px solid var(--amber);border-radius:12px;padding:14px 18px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.config-banner i{color:var(--amber);font-size:20px;flex-shrink:0}
+.config-banner p{font-size:13px;color:var(--text2);flex:1;min-width:140px}
+.url-input{flex:1;min-width:200px;max-width:340px;height:34px;padding:0 10px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;color:var(--text);outline:none}
+.url-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+
+/* Buttons */
+.btn{height:34px;padding:0 14px;border-radius:var(--radius);font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border2);background:var(--surface);color:var(--text);transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--surface2)}
+.btn:active{transform:scale(.98)}
+.btn-accent{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-accent:hover{background:#2563eb;border-color:#2563eb}
+.btn-green{background:var(--green-bg);color:var(--green-text);border-color:#a7f3d0}
+.btn-green:hover{background:#d1fae5}
+
+/* Stats */
+.stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px}
+.stat-label{font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px;display:flex;align-items:center;gap:4px}
+.stat-label i{font-size:13px}
+.stat-value{font-size:22px;font-weight:600;color:var(--text)}
+.stat-value.blue{color:var(--accent)}
+.stat-value.green{color:var(--green)}
+
+/* Tabs */
+.tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:20px}
+.tab{padding:8px 16px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;user-select:none}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+
+/* Toolbar */
+.toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:180px;max-width:280px}
+.search-wrap i{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:16px;pointer-events:none}
+.search-input{width:100%;height:34px;padding:0 10px 0 34px;border:1px solid var(--border2);border-radius:var(--radius);font-size:13px;color:var(--text);background:#fff;outline:none}
+.search-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(59,130,246,.1)}
+.search-input::placeholder{color:var(--text3)}
+.toolbar-info{font-size:12px;color:var(--text3);flex:1}
+
+/* Candidate cards */
+.candidate-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden;transition:box-shadow .15s}
+.candidate-card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.card-header{padding:12px 18px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.card-left{display:flex;align-items:center;gap:10px}
+.rank-badge{width:30px;height:30px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0}
+.rank-1{background:#fef3c7;color:#92400e;border:1px solid #fcd34d}
+.rank-2{background:#f1f5f9;color:#475569;border:1px solid #cbd5e1}
+.rank-3{background:#fff7ed;color:#9a3412;border:1px solid #fdba74}
+.rank-n{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.cand-id{font-weight:600;font-size:13px;color:var(--text)}
+.cand-subtitle{font-size:11px;color:var(--text3);margin-top:1px}
+.card-tags{display:flex;align-items:center;gap:6px}
+.card-tag{font-size:11px;color:var(--text2);display:flex;align-items:center;gap:4px;padding:3px 8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius)}
+.card-tag i{font-size:12px}
+
+/* Pipeline */
+.pipeline{display:flex;padding:14px 18px;border-bottom:1px solid var(--border)}
+.stage{flex:1;min-width:60px;padding:0 10px;border-right:1px solid var(--border);text-align:center}
+.stage:first-child{padding-left:0}
+.stage:last-child{border-right:none}
+.stage-bar-bg{height:3px;background:var(--border2);border-radius:2px;margin-bottom:8px;overflow:hidden}
+.stage-bar-fill{height:100%;border-radius:2px;transition:width .6s ease}
+.fill-green{background:var(--green)}
+.fill-blue{background:var(--accent)}
+.fill-amber{background:var(--amber)}
+.fill-red{background:var(--red)}
+.fill-purple{background:var(--purple)}
+.stage-label{font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:3px}
+.stage-val{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stage-sub{font-size:10px;color:var(--text3);margin-top:1px}
+
+/* Card footer */
+.card-footer{padding:10px 18px;background:var(--surface2);display:flex;align-items:flex-start;gap:10px}
+.reasoning-text{font-size:12px;color:var(--text2);line-height:1.55;flex:1}
+.verdict-chip{flex-shrink:0;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500}
+.verdict-strong{background:var(--green-bg);color:var(--green-text)}
+.verdict-balanced{background:var(--accent-bg);color:var(--accent-text)}
+.verdict-cautious{background:var(--amber-bg);color:var(--amber-text)}
+
+/* States */
+.state-box{text-align:center;padding:60px 24px;color:var(--text3)}
+.state-icon{font-size:40px;margin-bottom:12px;color:var(--border2)}
+.state-title{font-size:15px;font-weight:600;color:var(--text2);margin-bottom:6px}
+.state-sub{font-size:13px}
+.spinner-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;padding:60px 24px}
+.spinner{width:32px;height:32px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Pagination */
+.pagination{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;border-top:1px solid var(--border);background:var(--surface)}
+.page-info{font-size:12px;color:var(--text3)}
+.page-btns{display:flex;gap:4px}
+.page-btn{width:30px;height:30px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--surface);color:var(--text2);font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.page-btn:hover{background:var(--surface2)}
+.page-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.page-btn:disabled{opacity:.3;cursor:not-allowed}
+
+/* JD panel */
+.jd-panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;max-width:700px}
+.jd-panel-title{font-weight:600;font-size:15px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.jd-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;margin-bottom:18px}
+.jd-field label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:4px}
+.jd-field span{font-size:13px;font-weight:500;color:var(--text)}
+.skills-row{display:flex;flex-wrap:wrap;gap:6px}
+.skill-chip{padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500;background:var(--accent-bg);color:var(--accent-text);border:1px solid #bfdbfe}
+
+/* Dashboard page */
+.dash-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:24px}
+.dash-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px}
+.dash-card-title{font-size:12px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:8px}
+.dash-card-value{font-size:28px;font-weight:600;color:var(--text);margin-bottom:4px}
+.dash-card-sub{font-size:12px;color:var(--text2)}
+.activity-item{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)}
+.activity-item:last-child{border-bottom:none}
+.activity-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.activity-text{font-size:13px;color:var(--text2);flex:1}
+.activity-time{font-size:11px;color:var(--text3)}
+
+/* Candidates page flat table */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+thead{background:var(--surface2);border-bottom:1px solid var(--border)}
+th{padding:10px 16px;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);font-weight:600;white-space:nowrap}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s}
+tbody tr:last-child{border-bottom:none}
+tbody tr:hover{background:var(--surface2)}
+td{padding:10px 16px;font-size:13px;vertical-align:middle}
+
+/* Reports page */
+.report-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+.report-section h3{font-size:14px;font-weight:600;margin-bottom:14px;color:var(--text)}
+.score-dist-bar{display:flex;gap:3px;align-items:flex-end;height:80px;margin-bottom:8px}
+.dist-col{flex:1;background:var(--accent-bg);border-radius:3px 3px 0 0;border:1px solid #bfdbfe;min-height:4px;transition:height .6s ease}
+.dist-labels{display:flex;gap:3px}
+.dist-label{flex:1;text-align:center;font-size:9px;color:var(--text3)}
+
+/* Shortlists page */
+.shortlist-empty{text-align:center;padding:60px 24px;color:var(--text3)}
+.shortlist-empty i{font-size:40px;display:block;margin-bottom:12px;color:var(--border2)}
+
+/* Export page */
+.export-option{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px 20px;margin-bottom:12px;display:flex;align-items:center;gap:14px;cursor:pointer;transition:all .15s}
+.export-option:hover{border-color:var(--accent);background:var(--accent-bg)}
+.export-icon{width:40px;height:40px;border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.export-title{font-weight:600;font-size:13px;margin-bottom:2px}
+.export-sub{font-size:12px;color:var(--text2)}
+
+/* Toast */
+#toast{position:fixed;bottom:20px;right:20px;padding:10px 16px;border-radius:10px;font-size:13px;font-weight:500;color:#fff;box-shadow:0 4px 16px rgba(0,0,0,.15);transform:translateY(60px);opacity:0;transition:all .3s ease;z-index:999;pointer-events:none}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.success{background:var(--green)}
+#toast.error{background:var(--red)}
+#toast.info{background:var(--accent)}
+
+@media(max-width:860px){.sidebar{display:none}.stats-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- ── Sidebar ── -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark"><i class="ti ti-robot"></i></div>
+      <div>
+        <div class="logo-text">AI Recruiter</div>
+        <div class="logo-sub">Redrob Challenge</div>
+      </div>
+    </div>
+
+    <div style="padding:4px 0;flex:1">
+      <div class="nav-section">Main</div>
+      <div class="nav-item" onclick="navigate('dashboard')"><i class="ti ti-layout-dashboard"></i>Dashboard</div>
+      <div class="nav-item active" id="nav-recruitment" onclick="navigate('recruitment')"><i class="ti ti-users"></i>Recruitment</div>
+      <div class="nav-item" id="nav-candidates" onclick="navigate('candidates')"><i class="ti ti-file-text"></i>Candidates</div>
+
+      <div class="nav-section">Analytics</div>
+      <div class="nav-item" onclick="navigate('reports')"><i class="ti ti-chart-bar"></i>Reports</div>
+      <div class="nav-item" onclick="navigate('shortlists')"><i class="ti ti-star"></i>Shortlists</div>
+      <div class="nav-item" onclick="navigate('export')"><i class="ti ti-download"></i>Export</div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="nav-item" onclick="navigate('settings')"><i class="ti ti-settings"></i>Settings</div>
+    </div>
+  </div>
+
+  <!-- ── Main area ── -->
+  <div class="main">
+
+    <!-- Topbar -->
+    <div class="topbar">
+      <h1 id="pageTitle">Recruitment</h1>
+      <div class="topbar-right">
+        <div class="status-badge connecting" id="statusBadge">
+          <span class="sdot amber" id="statusDot"></span>
+          <span id="statusText">Connecting…</span>
+        </div>
+        <div class="avatar">PR</div>
+      </div>
+    </div>
+
+    <!-- ══════════ PAGE: Recruitment ══════════ -->
+    <div class="page active" id="page-recruitment">
+      <div class="content">
+
+        <!-- Config Banner -->
+        <div class="config-banner" id="configBanner">
+          <i class="ti ti-settings"></i>
+          <p>Enter your backend URL (local or Render deployed):</p>
+          <input class="url-input" id="urlInput" type="text" value="http://127.0.0.1:8000"/>
+          <button class="btn btn-accent" onclick="connectBackend()"><i class="ti ti-plug"></i>Connect</button>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label"><i class="ti ti-users"></i>Total candidates</div>
+            <div class="stat-value blue" id="statTotal">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label"><i class="ti ti-trophy"></i>Top ranked</div>
+            <div class="stat-value" id="statTop">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label"><i class="ti ti-chart-line"></i>Avg score</div>
+            <div class="stat-value green" id="statAvg">—</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label"><i class="ti ti-briefcase"></i>Target role</div>
+            <div class="stat-value" id="statRole" style="font-size:13px;padding-top:4px;line-height:1.3">—</div>
+          </div>
+        </div>
+
+        <!-- Sub-tabs -->
+        <div class="tabs">
+          <div class="tab active" onclick="showSubTab('vacancies',this)">Vacancies</div>
+          <div class="tab" onclick="showSubTab('allcands',this)">All candidates</div>
+          <div class="tab" onclick="showSubTab('jdtab',this)">Job description</div>
+        </div>
+
+        <!-- Sub-tab: Vacancies -->
+        <div id="subtab-vacancies">
+          <div class="toolbar">
+            <div class="search-wrap">
+              <i class="ti ti-search"></i>
+              <input class="search-input" id="searchInput" type="text" placeholder="Search by ID or reasoning…" oninput="filterAndRender()"/>
+            </div>
+            <span class="toolbar-info" id="toolbarInfo">Connect backend to begin</span>
+            <button class="btn" onclick="loadRankings()"><i class="ti ti-refresh"></i>Refresh</button>
+            <button class="btn btn-green" onclick="downloadCSV()"><i class="ti ti-download"></i>Download CSV</button>
+          </div>
+          <div id="cardsContainer">
+            <div class="state-box">
+              <div class="state-icon"><i class="ti ti-plug"></i></div>
+              <div class="state-title">Not connected</div>
+              <div class="state-sub">Enter your backend URL above and click Connect</div>
+            </div>
+          </div>
+          <div id="paginationWrap" style="display:none" class="pagination">
+            <span class="page-info" id="pageInfo"></span>
+            <div class="page-btns" id="pageBtns"></div>
+          </div>
+        </div>
+
+        <!-- Sub-tab: All candidates -->
+        <div id="subtab-allcands" style="display:none">
+          <div class="toolbar">
+            <div class="search-wrap">
+              <i class="ti ti-search"></i>
+              <input class="search-input" id="searchInput2" type="text" placeholder="Search…" oninput="filterTable()"/>
+            </div>
+            <span class="toolbar-info" id="toolbarInfo2">—</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th>Rank</th><th>Candidate ID</th><th>Score</th><th style="width:55%">Reasoning</th>
+              </tr></thead>
+              <tbody id="tableBody"><tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text3)">Load rankings to view</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Sub-tab: Job description -->
+        <div id="subtab-jdtab" style="display:none">
+          <div class="jd-panel" id="jdFull">
+            <div style="text-align:center;padding:32px;color:var(--text3)">
+              <i class="ti ti-file-description" style="font-size:36px;display:block;margin-bottom:8px"></i>
+              Connect backend to load job description
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ══════════ PAGE: Dashboard ══════════ -->
+    <div class="page" id="page-dashboard">
+      <div class="content">
+        <div class="dash-grid">
+          <div class="dash-card">
+            <div class="dash-card-title">Total candidates</div>
+            <div class="dash-card-value" id="dTotal">—</div>
+            <div class="dash-card-sub">loaded from backend</div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-title">Top ranked</div>
+            <div class="dash-card-value" id="dTop">—</div>
+            <div class="dash-card-sub">after honeypot filtering</div>
+          </div>
+          <div class="dash-card">
+            <div class="dash-card-title">Avg score</div>
+            <div class="dash-card-value" id="dAvg">—</div>
+            <div class="dash-card-sub">across top 100</div>
+          </div>
+        </div>
+        <div class="report-section">
+          <h3>Recent activity</h3>
+          <div id="activityFeed">
+            <div class="activity-item"><div class="activity-dot" style="background:var(--text3)"></div><div class="activity-text">No activity yet — connect backend first</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ PAGE: Candidates ══════════ -->
+    <div class="page" id="page-candidates">
+      <div class="content">
+        <div class="toolbar" style="margin-bottom:16px">
+          <div class="search-wrap">
+            <i class="ti ti-search"></i>
+            <input class="search-input" id="searchInput3" type="text" placeholder="Search candidates…" oninput="filterTable3()"/>
+          </div>
+          <span class="toolbar-info" id="toolbarInfo3">—</span>
+          <button class="btn btn-green" onclick="downloadCSV()"><i class="ti ti-download"></i>Download CSV</button>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>Rank</th><th>Candidate ID</th><th>Score</th><th style="width:55%">Reasoning</th>
+            </tr></thead>
+            <tbody id="tableBody3"><tr><td colspan="4" style="text-align:center;padding:40px;color:var(--text3)">Connect backend to view candidates</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ PAGE: Reports ══════════ -->
+    <div class="page" id="page-reports">
+      <div class="content">
+        <div class="report-section">
+          <h3>Score distribution</h3>
+          <div class="score-dist-bar" id="distBar">
+            <div style="text-align:center;color:var(--text3);font-size:12px;flex:1;align-self:center">Connect backend to see score distribution</div>
+          </div>
+          <div class="dist-labels" id="distLabels"></div>
+        </div>
+        <div class="report-section">
+          <h3>Title fit breakdown</h3>
+          <div id="titleBreakdown" style="color:var(--text3);font-size:13px">Connect backend to see breakdown</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ PAGE: Shortlists ══════════ -->
+    <div class="page" id="page-shortlists">
+      <div class="content">
+        <div class="shortlist-empty">
+          <i class="ti ti-star"></i>
+          <div class="state-title">No shortlists yet</div>
+          <div class="state-sub">Strong-fit candidates from rankings will appear here</div>
+        </div>
+        <div id="shortlistCards"></div>
+      </div>
+    </div>
+
+    <!-- ══════════ PAGE: Export ══════════ -->
+    <div class="page" id="page-export">
+      <div class="content">
+        <div class="export-option" onclick="downloadCSV()">
+          <div class="export-icon" style="background:var(--green-bg);color:var(--green-text)"><i class="ti ti-file-spreadsheet"></i></div>
+          <div>
+            <div class="export-title">Download submission CSV</div>
+            <div class="export-sub">candidate_id, rank, score, reasoning — ready for validator</div>
+          </div>
+          <i class="ti ti-chevron-right" style="margin-left:auto;color:var(--text3)"></i>
+        </div>
+        <div class="export-option" onclick="exportJSON()">
+          <div class="export-icon" style="background:var(--accent-bg);color:var(--accent-text)"><i class="ti ti-braces"></i></div>
+          <div>
+            <div class="export-title">Export as JSON</div>
+            <div class="export-sub">Full ranked list as JSON file</div>
+          </div>
+          <i class="ti ti-chevron-right" style="margin-left:auto;color:var(--text3)"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- ══════════ PAGE: Settings ══════════ -->
+    <div class="page" id="page-settings">
+      <div class="content">
+        <div class="report-section" style="max-width:500px">
+          <h3>Backend connection</h3>
+          <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+            <input class="url-input" id="urlInput2" type="text" style="flex:1;max-width:none" placeholder="http://127.0.0.1:8000"/>
+            <button class="btn btn-accent" onclick="connectFromSettings()"><i class="ti ti-plug"></i>Connect</button>
+          </div>
+          <p style="font-size:12px;color:var(--text3);margin-top:10px">Enter your local server or Render deployed URL</p>
+        </div>
+        <div class="report-section" style="max-width:500px">
+          <h3>About</h3>
+          <p style="font-size:13px;color:var(--text2);line-height:1.6">AI Recruiter — Redrob Challenge<br/>Ranks candidates by title fit, skill depth, career evidence, and activity recency.<br/><br/><strong>Built by:</strong> Priya &nbsp;·&nbsp; Marwadi University</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+let BASE_URL = 'http://127.0.0.1:8000';
+let allCandidates = [];
+let filtered = [];
+let currentPage = 1;
+const PER_PAGE = 10;
+
+// ── Navigation ───────────────────────────────────────
+const PAGE_TITLES = {
+  dashboard:'Dashboard', recruitment:'Recruitment', candidates:'Candidates',
+  reports:'Reports', shortlists:'Shortlists', export:'Export', settings:'Settings'
+};
+
+function navigate(page) {
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  // Show target
+  const el = document.getElementById('page-' + page);
+  if (el) el.classList.add('active');
+  // Update sidebar active
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  // Update title
+  document.getElementById('pageTitle').textContent = PAGE_TITLES[page] || page;
+  // Sync settings URL input
+  if (page === 'settings') document.getElementById('urlInput2').value = BASE_URL;
+}
+
+// ── Sub-tabs ─────────────────────────────────────────
+function showSubTab(name, el) {
+  ['vacancies','allcands','jdtab'].forEach(t => {
+    document.getElementById('subtab-' + t).style.display = t === name ? '' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ── Helpers ──────────────────────────────────────────
+function toast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.className = '', 3000);
+}
+
+function setStatus(state, text) {
+  document.getElementById('statusBadge').className = 'status-badge ' + state;
+  document.getElementById('statusDot').className = 'sdot ' + (state==='connected'?'green':state==='error'?'red':'amber');
+  document.getElementById('statusText').textContent = text;
+}
+
+function rankClass(r) {
+  return r===1?'rank-1':r===2?'rank-2':r===3?'rank-3':'rank-n';
+}
+
+function verdictFrom(text) {
+  if (!text) return {cls:'verdict-balanced',label:'Review'};
+  const t = text.toLowerCase();
+  if (t.includes('good recruiter priority')||t.includes('strong candidate')||t.includes('worth prioritizing')) return {cls:'verdict-strong',label:'Strong fit'};
+  if (t.includes('cautious')||t.includes('review carefully')) return {cls:'verdict-cautious',label:'Review carefully'};
+  return {cls:'verdict-balanced',label:'Shortlist'};
+}
+
+function parseSignals(text) {
+  const expMatch = (text||'').match(/(\d+(?:\.\d+)?)\s+years?/i);
+  const exp = expMatch ? expMatch[1]+' yrs' : '0 yrs';
+  const skillMatch = (text||'').match(/(?:led by|include|around|shows up as|through|differentiators include)\s+([A-Za-z][^;.]{2,40}?)(?:;|\.)/i);
+  const skills = skillMatch ? skillMatch[1].trim() : '—';
+  let titleFit='Direct', titlePct=80, titleFill='fill-blue';
+  if(/senior|staff|lead|principal/i.test(text)){titleFit='Senior';titlePct=92;titleFill='fill-purple';}
+  else if(/junior|associate/i.test(text)){titleFit='Junior';titlePct=40;titleFill='fill-amber';}
+  else if(/adjacent|transferable/i.test(text)){titleFit='Adjacent';titlePct=55;titleFill='fill-amber';}
+  let activity='Moderate', actPct=55, actFill='fill-amber';
+  if(/recently active|current|activity is current/i.test(text)){activity='Recent';actPct=90;actFill='fill-green';}
+  else if(/inactive|extended inactivity/i.test(text)){activity='Inactive';actPct=15;actFill='fill-red';}
+  const expYrs = expMatch ? parseFloat(expMatch[1]) : 0;
+  const expPct = Math.min(100, (expYrs/12)*100);
+  return {exp, skills, titleFit, titlePct, titleFill, activity, actPct, actFill, expPct};
+}
+
+function safeId(c) {
+  const id = c.candidate_id;
+  if (!id || id === 'UNKNOWN') return 'CAND_' + String(c.rank).padStart(4,'0');
+  return id;
+}
+
+// ── Connect ──────────────────────────────────────────
+async function connectBackend(url) {
+  BASE_URL = (url || document.getElementById('urlInput').value || '').replace(/\/$/,'');
+  setStatus('connecting','Connecting…');
+  try {
+    const res = await fetch(BASE_URL + '/');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    const count = data.candidates_loaded || 0;
+    setStatus('connected', 'Connected · ' + count + ' candidates');
+    document.getElementById('statTotal').textContent = count.toLocaleString();
+    document.getElementById('dTotal').textContent = count.toLocaleString();
+    document.getElementById('configBanner').style.display = 'none';
+    // Update activity feed
+    document.getElementById('activityFeed').innerHTML = `
+      <div class="activity-item"><div class="activity-dot" style="background:var(--green)"></div><div class="activity-text">Backend connected — ${count} candidates loaded</div><div class="activity-time">now</div></div>
+      <div class="activity-item"><div class="activity-dot" style="background:var(--accent)"></div><div class="activity-text">Fetching job description…</div><div class="activity-time">now</div></div>`;
+    toast('Backend connected!');
+    await loadJD();
+    await loadRankings();
+  } catch(e) {
+    setStatus('error','Connection failed');
+    toast('Could not reach backend — check URL & CORS', 'error');
+  }
+}
+
+function connectFromSettings() {
+  const url = document.getElementById('urlInput2').value;
+  document.getElementById('urlInput').value = url;
+  connectBackend(url);
+  navigate('recruitment');
+}
+
+// ── JD ───────────────────────────────────────────────
+async function loadJD() {
+  try {
+    const res = await fetch(BASE_URL + '/jd');
+    const jd = await res.json();
+    document.getElementById('statRole').textContent = (jd.role||'—').split('—')[0].trim();
+    const chips = (jd.must_have_skills||[]).map(s=>`<span class="skill-chip">${s}</span>`).join('');
+    document.getElementById('jdFull').innerHTML = `
+      <div class="jd-panel-title"><i class="ti ti-file-description" style="font-size:18px"></i>Job Description</div>
+      <div class="jd-grid">
+        <div class="jd-field"><label>Role</label><span>${jd.role||'—'}</span></div>
+        <div class="jd-field"><label>Company</label><span>${jd.company||'—'}</span></div>
+        <div class="jd-field"><label>Location</label><span>${jd.location||'—'}</span></div>
+        <div class="jd-field"><label>Experience</label><span>${jd.experience||'—'}</span></div>
+      </div>
+      <div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--text3);margin-bottom:8px">Must-have skills</div>
+      <div class="skills-row">${chips}</div></div>`;
+  } catch(e) {}
+}
+
+// ── Rankings ─────────────────────────────────────────
+async function loadRankings() {
+  document.getElementById('cardsContainer').innerHTML = `<div class="spinner-wrap"><div class="spinner"></div><div style="font-size:13px;color:var(--text3)">Ranking candidates…</div></div>`;
+  document.getElementById('paginationWrap').style.display = 'none';
+  try {
+    const res = await fetch(BASE_URL + '/rank');
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    allCandidates = await res.json();
+    // Patch missing candidate_ids
+    allCandidates = allCandidates.map((c,i) => ({
+      ...c,
+      candidate_id: (c.candidate_id && c.candidate_id !== 'UNKNOWN') ? c.candidate_id : `CAND_${String(i+1).padStart(4,'0')}`
+    }));
+    document.getElementById('statTop').textContent = allCandidates.length;
+    document.getElementById('dTop').textContent = allCandidates.length;
+    if (allCandidates.length) {
+      const avg = allCandidates.reduce((s,c)=>s+c.score,0)/allCandidates.length;
+      document.getElementById('statAvg').textContent = avg.toFixed(3);
+      document.getElementById('dAvg').textContent = avg.toFixed(3);
+    }
+    filterAndRender();
+    renderTable();
+    renderReports();
+    renderShortlists();
+    toast('Loaded ' + allCandidates.length + ' ranked candidates');
+    // Update activity feed
+    document.getElementById('activityFeed').innerHTML = `
+      <div class="activity-item"><div class="activity-dot" style="background:var(--green)"></div><div class="activity-text">Rankings loaded — ${allCandidates.length} candidates ranked</div><div class="activity-time">just now</div></div>
+      <div class="activity-item"><div class="activity-dot" style="background:var(--accent)"></div><div class="activity-text">Top candidate: ${allCandidates[0]?.candidate_id||'—'} (score ${allCandidates[0]?.score?.toFixed(3)||'—'})</div><div class="activity-time">just now</div></div>`;
+  } catch(e) {
+    document.getElementById('cardsContainer').innerHTML = `<div class="state-box"><div class="state-icon"><i class="ti ti-alert-circle" style="color:var(--red)"></i></div><div class="state-title">Failed to load rankings</div><div class="state-sub">${e.message}</div></div>`;
+  }
+}
+
+// ── Filter + Render cards ─────────────────────────────
+function filterAndRender() {
+  const q = document.getElementById('searchInput').value.trim().toLowerCase();
+  filtered = q ? allCandidates.filter(c =>
+    c.candidate_id.toLowerCase().includes(q) || (c.reasoning||'').toLowerCase().includes(q)
+  ) : [...allCandidates];
+  currentPage = 1;
+  renderCards();
+}
+
+function renderCards() {
+  if (!filtered.length) {
+    document.getElementById('cardsContainer').innerHTML = `<div class="state-box"><div class="state-icon"><i class="ti ti-search"></i></div><div class="state-title">No results</div><div class="state-sub">Try a different search term</div></div>`;
+    document.getElementById('paginationWrap').style.display = 'none';
+    return;
+  }
+  const maxScore = Math.max(...filtered.map(c=>c.score));
+  const start = (currentPage-1)*PER_PAGE;
+  const page = filtered.slice(start, start+PER_PAGE);
+  const totalPages = Math.ceil(filtered.length/PER_PAGE);
+  document.getElementById('toolbarInfo').textContent = `Showing ${filtered.length} of ${allCandidates.length} candidates`;
+
+  document.getElementById('cardsContainer').innerHTML = page.map(c => {
+    const pct = Math.round((c.score/maxScore)*100);
+    const {exp,skills,titleFit,titlePct,titleFill,activity,actPct,actFill,expPct} = parseSignals(c.reasoning);
+    const {cls:vCls,label:vLabel} = verdictFrom(c.reasoning);
+    const scoreFill = pct>80?'fill-green':pct>50?'fill-blue':'fill-amber';
+    return `<div class="candidate-card">
+      <div class="card-header">
+        <div class="card-left">
+          <div class="rank-badge ${rankClass(c.rank)}">${c.rank}</div>
+          <div>
+            <div class="cand-id">${c.candidate_id}</div>
+            <div class="cand-subtitle">Score ${c.score.toFixed(4)}</div>
+          </div>
+        </div>
+        <div class="card-tags">
+          <span class="card-tag"><i class="ti ti-building"></i>Redrob AI</span>
+          <span class="card-tag"><i class="ti ti-map-pin"></i>Pune / Noida</span>
+          <span class="card-tag"><i class="ti ti-clock"></i>5–9 yrs</span>
+        </div>
+      </div>
+      <div class="pipeline">
+        <div class="stage">
+          <div class="stage-bar-bg"><div class="stage-bar-fill ${scoreFill}" style="width:${pct}%"></div></div>
+          <div class="stage-label">Score</div>
+          <div class="stage-val">${c.score.toFixed(3)}</div>
+          <div class="stage-sub">${pct}% of top</div>
+        </div>
+        <div class="stage">
+          <div class="stage-bar-bg"><div class="stage-bar-fill ${titleFill}" style="width:${titlePct}%"></div></div>
+          <div class="stage-label">Title fit</div>
+          <div class="stage-val">${titleFit}</div>
+          <div class="stage-sub">match level</div>
+        </div>
+        <div class="stage">
+          <div class="stage-bar-bg"><div class="stage-bar-fill fill-green" style="width:70%"></div></div>
+          <div class="stage-label">Skills</div>
+          <div class="stage-val" style="font-size:11px;font-weight:500">${skills}</div>
+          <div class="stage-sub">top signals</div>
+        </div>
+        <div class="stage">
+          <div class="stage-bar-bg"><div class="stage-bar-fill fill-blue" style="width:${Math.min(100,expPct)}%"></div></div>
+          <div class="stage-label">Experience</div>
+          <div class="stage-val">${exp}</div>
+          <div class="stage-sub">career length</div>
+        </div>
+        <div class="stage">
+          <div class="stage-bar-bg"><div class="stage-bar-fill ${actFill}" style="width:${actPct}%"></div></div>
+          <div class="stage-label">Activity</div>
+          <div class="stage-val">${activity}</div>
+          <div class="stage-sub">platform signal</div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <p class="reasoning-text">${c.reasoning||'—'}</p>
+        <span class="verdict-chip ${vCls}">${vLabel}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Pagination
+  const pag = document.getElementById('paginationWrap');
+  pag.style.display = 'flex';
+  document.getElementById('pageInfo').textContent = `${start+1}–${Math.min(start+PER_PAGE,filtered.length)} of ${filtered.length}`;
+  let html = `<button class="page-btn" onclick="goPage(${currentPage-1})" ${currentPage===1?'disabled':''}><i class="ti ti-chevron-left" style="font-size:13px"></i></button>`;
+  const totalP = Math.ceil(filtered.length/PER_PAGE);
+  for(let p=1;p<=totalP;p++){
+    if(totalP<=7||Math.abs(p-currentPage)<=1||p===1||p===totalP)
+      html+=`<button class="page-btn ${p===currentPage?'active':''}" onclick="goPage(${p})">${p}</button>`;
+    else if(Math.abs(p-currentPage)===2)
+      html+=`<button class="page-btn" disabled>…</button>`;
+  }
+  html+=`<button class="page-btn" onclick="goPage(${currentPage+1})" ${currentPage===totalP?'disabled':''}><i class="ti ti-chevron-right" style="font-size:13px"></i></button>`;
+  document.getElementById('pageBtns').innerHTML = html;
+}
+
+function goPage(p){
+  const total=Math.ceil(filtered.length/PER_PAGE);
+  if(p<1||p>total)return;
+  currentPage=p;
+  renderCards();
+  document.querySelector('#page-recruitment .content').scrollTop=0;
+}
+
+// ── Flat table ────────────────────────────────────────
+function renderTable() {
+  const maxScore = allCandidates.length ? Math.max(...allCandidates.map(c=>c.score)) : 1;
+  document.getElementById('toolbarInfo2').textContent = allCandidates.length + ' candidates';
+  document.getElementById('toolbarInfo3').textContent = allCandidates.length + ' candidates';
+  const rows = allCandidates.map(c=>`
+    <tr>
+      <td><span class="rank-badge ${rankClass(c.rank)}" style="width:26px;height:26px;font-size:12px">${c.rank}</span></td>
+      <td style="font-weight:600">${c.candidate_id}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-weight:600;min-width:46px">${c.score.toFixed(3)}</span>
+          <div style="width:70px;height:5px;background:var(--border2);border-radius:3px;overflow:hidden">
+            <div style="width:${Math.round((c.score/maxScore)*100)}%;height:100%;background:var(--accent);border-radius:3px"></div>
+          </div>
+        </div>
+      </td>
+      <td style="color:var(--text2);font-size:12px;line-height:1.5">${c.reasoning||'—'}</td>
+    </tr>`).join('');
+  document.getElementById('tableBody').innerHTML = rows;
+  document.getElementById('tableBody3').innerHTML = rows;
+}
+
+function filterTable(){
+  const q=document.getElementById('searchInput2').value.toLowerCase();
+  document.querySelectorAll('#tableBody tr').forEach(r=>r.style.display=(!q||r.textContent.toLowerCase().includes(q))?'':'none');
+}
+function filterTable3(){
+  const q=document.getElementById('searchInput3').value.toLowerCase();
+  document.querySelectorAll('#tableBody3 tr').forEach(r=>r.style.display=(!q||r.textContent.toLowerCase().includes(q))?'':'none');
+}
+
+// ── Reports ───────────────────────────────────────────
+function renderReports() {
+  if (!allCandidates.length) return;
+  // Score distribution buckets
+  const buckets = [0,0,0,0,0];
+  const labels = ['0–0.2','0.2–0.4','0.4–0.6','0.6–0.8','0.8+'];
+  allCandidates.forEach(c=>{
+    const s=c.score;
+    if(s<0.2)buckets[0]++;
+    else if(s<0.4)buckets[1]++;
+    else if(s<0.6)buckets[2]++;
+    else if(s<0.8)buckets[3]++;
+    else buckets[4]++;
+  });
+  const maxB=Math.max(...buckets,1);
+  document.getElementById('distBar').innerHTML = buckets.map((b,i)=>
+    `<div class="dist-col" style="height:${Math.max(4,Math.round((b/maxB)*80))}px" title="${b} candidates"></div>`
+  ).join('');
+  document.getElementById('distLabels').innerHTML = labels.map(l=>
+    `<div class="dist-label">${l}</div>`
+  ).join('');
+  // Title breakdown
+  const counts={Senior:0,Direct:0,Adjacent:0,Junior:0,Transition:0};
+  allCandidates.forEach(c=>{
+    const t=(c.reasoning||'').toLowerCase();
+    if(/senior|staff|lead|principal/.test(t))counts.Senior++;
+    else if(/junior|associate/.test(t))counts.Junior++;
+    else if(/adjacent/.test(t))counts.Adjacent++;
+    else if(/direct title/.test(t))counts.Direct++;
+    else counts.Transition++;
+  });
+  document.getElementById('titleBreakdown').innerHTML = Object.entries(counts).map(([k,v])=>`
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+      <div style="width:80px;font-size:12px;color:var(--text2)">${k}</div>
+      <div style="flex:1;height:8px;background:var(--border2);border-radius:4px;overflow:hidden">
+        <div style="width:${Math.round((v/allCandidates.length)*100)}%;height:100%;background:var(--accent);border-radius:4px"></div>
+      </div>
+      <div style="font-size:12px;font-weight:600;min-width:24px">${v}</div>
+    </div>`).join('');
+}
+
+// ── Shortlists ────────────────────────────────────────
+function renderShortlists() {
+  const strong = allCandidates.filter(c=>{
+    const t=(c.reasoning||'').toLowerCase();
+    return t.includes('good recruiter priority')||t.includes('strong candidate')||t.includes('worth prioritizing');
+  });
+  if(!strong.length){
+    document.getElementById('shortlistCards').innerHTML='';
+    document.querySelector('.shortlist-empty').style.display='block';
+    return;
+  }
+  document.querySelector('.shortlist-empty').style.display='none';
+  document.getElementById('shortlistCards').innerHTML = strong.map(c=>`
+    <div class="candidate-card" style="margin-bottom:10px">
+      <div class="card-header">
+        <div class="card-left">
+          <div class="rank-badge ${rankClass(c.rank)}">${c.rank}</div>
+          <div><div class="cand-id">${c.candidate_id}</div><div class="cand-subtitle">Score ${c.score.toFixed(4)}</div></div>
+        </div>
+        <span class="verdict-chip verdict-strong">Strong fit</span>
+      </div>
+      <div class="card-footer"><p class="reasoning-text">${c.reasoning||'—'}</p></div>
+    </div>`).join('');
+}
+
+// ── CSV / JSON export ─────────────────────────────────
+function downloadCSV(){
+  if(!allCandidates.length){toast('Load rankings first!','error');return;}
+  window.open(BASE_URL+'/rank/download','_blank');
+  toast('Downloading CSV…','info');
+}
+
+function exportJSON(){
+  if(!allCandidates.length){toast('Load rankings first!','error');return;}
+  const blob=new Blob([JSON.stringify(allCandidates,null,2)],{type:'application/json'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download='ranked_candidates.json';
+  a.click();
+  toast('JSON exported!');
+}
+
+// ── Auto connect on load ──────────────────────────────
+window.addEventListener('load',()=>setTimeout(()=>connectBackend().catch(()=>{}),400));
+</script>
+</body>
+</html>

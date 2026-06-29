@@ -1,6 +1,7 @@
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware   # ← NEW
 from dotenv import load_dotenv
 from app.services.resume_parser import load_candidates
 from app.routes import ranking_routes, jd_routes, resume_routes
@@ -32,6 +33,16 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan
 )
+
+# ── CORS — allow frontend to call backend ──────────────
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],        # all origins (safe for local dev)
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+# ───────────────────────────────────────────────────────
 
 app.include_router(ranking_routes.router, tags=["Ranking"])
 app.include_router(jd_routes.router, tags=["Job Description"])
